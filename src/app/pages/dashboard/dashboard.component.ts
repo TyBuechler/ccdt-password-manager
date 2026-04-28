@@ -48,7 +48,8 @@ import { Credential, AuditLog } from '../../models/credential.model';
         <div class="panel">
           <div *ngIf="auditLogs().length === 0" class="empty-state muted mono">No activity yet.</div>
           <div class="log-list">
-            <div class="log-row" *ngFor="let log of auditLogs().slice(0, 8)">
+            <div class="log-row" *ngFor="let log of auditLogs().slice(0, 10)">
+              <span class="log-icon">{{ getActionIcon(log.action) }}</span>
               <span class="log-action badge" [class]="getBadgeClass(log.action)">{{ log.action }}</span>
               <span class="log-target">{{ log.targetName || '—' }}</span>
               <span class="log-time muted mono">{{ formatTime(log.timestamp) }}</span>
@@ -71,6 +72,7 @@ import { Credential, AuditLog } from '../../models/credential.model';
     .section-title { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; margin-bottom: 12px; text-transform: uppercase; color: var(--text-secondary); }
     .log-list { display: flex; flex-direction: column; gap: 10px; }
     .log-row { align-items: center; display: flex; gap: 12px; }
+    .log-icon { font-size: 16px; }
     .log-target { flex: 1; font-size: 14px; }
     .log-time { font-size: 12px; }
     .empty-state { font-size: 13px; text-align: center; padding: 20px 0; }
@@ -98,6 +100,14 @@ export class DashboardComponent implements OnInit {
   getBadgeClass(action: string): string {
     const map: Record<string, string> = { create: 'badge-success', delete: 'badge-danger', update: 'badge-warn', login: 'badge-info' };
     return map[action] ?? 'badge-info';
+  }
+
+  getActionIcon(action: string): string {
+    const icons: Record<string, string> = {
+      login: '🔐', logout: '🚪', create: '➕', update: '✏️',
+      delete: '🗑', view: '👁', copy: '📋'
+    };
+    return icons[action] ?? '📌';
   }
 
   formatTime(ts: any): string {

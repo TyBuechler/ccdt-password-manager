@@ -1,12 +1,8 @@
 import { Injectable } from '@angular/core';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { environment } from '../../environments/environment';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { Credential, AuditLog, Folder } from '../models/credential.model';
 import { AuthService } from './auth.service';
-
-const app = initializeApp(environment.firebase);
-const db = getFirestore(app);
+import { db } from './firebase';
 
 @Injectable({ providedIn: 'root' })
 export class CredentialService {
@@ -89,7 +85,15 @@ export class CredentialService {
     const snap = await getDocs(collection(db, 'users', uid, 'auditLogs'));
     return snap.docs
       .map(d => ({ id: d.id, ...d.data() } as AuditLog))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      .sort((a, b) => {
+        const aTime = (a.timestamp as any)?.toDate?.() ?? new Date(a.timestamp as any);
+        const bTime = (b.timestamp as any)?.toDate?.() ?? new Date(b.timestamp as any);
+        return bTime.getTime() - aTime.getTime();
+      });
+  }
+
+  async logCopyAction(credentialId: string, siteName: string): Promise<void> {
+    await this.logAction('copy', credentialId, siteName);
   }
 
   private async logAction(action: AuditLog['action'], targetId?: string, targetName?: string): Promise<void> {

@@ -1,11 +1,12 @@
 export const environment = {
   production: false,
   firebase: {
-    apiKey: 'YOUR_API_KEY',
-    authDomain: 'YOUR_PROJECT.firebaseapp.com',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT.appspot.com',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    appId: 'YOUR_APP_ID'
+    apiKey: "AIzaSyDzr2mV-Onn_-IyFHE6eQ1ae7NSEY8Ohvg",
+    authDomain: "ccdt-password-manager.firebaseapp.com",
+    projectId: "ccdt-password-manager",
+    storageBucket: "ccdt-password-manager.firebasestorage.app",
+    messagingSenderId: "26588905929",
+    appId: "1:26588905929:web:ffd399b91a7173c53d2818",
+    measurementId: "G-NX4RY9D2HG"
   }
 };
