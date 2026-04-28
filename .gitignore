@@ -1,0 +1,19 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Angular build output
+dist/
+.angular/
+
+# Environment (keep template, ignore real keys)
+src/environments/environment.prod.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
