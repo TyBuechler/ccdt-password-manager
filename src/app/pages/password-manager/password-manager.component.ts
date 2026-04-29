@@ -24,10 +24,18 @@ import { Credential, Folder } from '../../models/credential.model';
       <!-- Folder tabs -->
       <div class="folder-tabs">
         <button class="tab" [class.active]="!activeFolder" (click)="activeFolder = null; runSearch()">All</button>
-        <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="activeFolder = f.id ?? null; runSearch()">
+        <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="activeFolder = f.id; runSearch()">
           {{ f.name }}
         </button>
         <button class="tab add-folder" (click)="addFolderPrompt()">+ Folder</button>
+      </div>
+
+      <!-- Tag cloud -->
+      <div class="tag-cloud" *ngIf="allTags.length > 0">
+        <button class="tag-chip" *ngFor="let t of allTags"
+          [class.active]="activeTag === t"
+          (click)="activeTag = t; runSearch()">{{ t }}</button>
+        <button class="tag-chip tag-clear" *ngIf="activeTag" (click)="activeTag = null; runSearch()">✕ Clear</button>
       </div>
 
       <!-- Credentials list -->
@@ -85,13 +93,16 @@ import { Credential, Folder } from '../../models/credential.model';
             <div class="field">
               <label>Password *</label>
               <div class="pw-row">
-                <input [type]="showPw ? 'text' : 'password'" [(ngModel)]="form.sitePassword" (ngModelChange)="checkStrength()" />
+                <input [type]="showPw ? 'text' : 'password'" [(ngModel)]="form.sitePassword"
+                  (ngModelChange)="checkStrength(); checkDuplicate()" />
                 <button class="btn btn-icon" (click)="showPw = !showPw">{{ showPw ? '🙈' : '👁' }}</button>
                 <button class="btn btn-icon" title="Generate" (click)="generatePw()">⚡</button>
+                <button class="btn btn-icon" title="Strengthen" (click)="strengthenPw()">💪</button>
               </div>
               <div class="strength-bar" *ngIf="form.sitePassword">
                 <div class="bar-fill" [style.width.%]="(strength.score / 4)*100" [style.background]="strength.color"></div>
               </div>
+              <div class="dup-warning" *ngIf="duplicateWarning">{{ duplicateWarning }}</div>
             </div>
             <div class="field">
               <label>Tags (comma separated)</label>
@@ -125,10 +136,15 @@ import { Credential, Folder } from '../../models/credential.model';
     .search-field { margin: 0; min-width: 240px; }
     .search-field input { margin: 0; }
     h2 { font-family: var(--font-mono); font-size: 20px; }
-    .folder-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .folder-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
     .tab { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; font-family: var(--font-mono); font-size: 12px; padding: 6px 14px; text-transform: uppercase; transition: all var(--transition); }
     .tab:hover, .tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
     .add-folder { border-style: dashed; }
+    .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .tag-chip { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 2px; color: var(--text-muted); cursor: pointer; font-family: var(--font-mono); font-size: 11px; padding: 3px 10px; transition: all var(--transition); }
+    .tag-chip:hover, .tag-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+    .tag-clear { border-color: var(--accent-danger); color: var(--accent-danger); }
+    .tag-clear:hover { background: rgba(255,0,0,0.08); }
     .cred-list { display: flex; flex-direction: column; gap: 12px; }
     .cred-card { cursor: default; }
     .cred-top { align-items: center; display: flex; justify-content: space-between; margin-bottom: 10px; }
@@ -151,6 +167,7 @@ import { Credential, Folder } from '../../models/credential.model';
     .pw-row input { flex: 1; }
     .strength-bar { background: var(--border); border-radius: 2px; height: 4px; margin-top: 6px; overflow: hidden; }
     .bar-fill { height: 100%; transition: all 0.3s ease; border-radius: 2px; }
+    .dup-warning { color: var(--accent-warn, #f59e0b); font-size: 12px; margin-top: 6px; }
     .alert { margin-top: 12px; }
   `]
 })
@@ -163,7 +180,8 @@ export class PasswordManagerComponent implements OnInit {
   filtered = signal<Credential[]>([]);
 
   searchQuery = '';
-  activeFolder: string | null = null;
+  activeFolder: string | null | undefined = null;
+  activeTag: string | null = null;
   showModal = false;
   showPw = false;
   saving = false;
@@ -172,11 +190,18 @@ export class PasswordManagerComponent implements OnInit {
   editId: string | null = null;
   tagsInput = '';
   strength: any = { score: 0, color: '' };
+  duplicateWarning = '';
 
   form: Partial<Credential> = this.emptyForm();
 
   emptyForm(): Partial<Credential> {
     return { siteName: '', siteUrl: '', siteUsername: '', sitePassword: '', folderId: '', tags: [] };
+  }
+
+  get allTags(): string[] {
+    const tags = new Set<string>();
+    this.credentials().forEach(c => (c.tags ?? []).forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
   }
 
   async ngOnInit() {
@@ -193,26 +218,63 @@ export class PasswordManagerComponent implements OnInit {
   runSearch() {
     let list = this.credentials();
     if (this.activeFolder) list = list.filter(c => c.folderId === this.activeFolder);
+    if (this.activeTag) list = list.filter(c => (c.tags ?? []).includes(this.activeTag!));
     this.filtered.set(this.credService.searchCredentials(list, this.searchQuery));
   }
 
-  openAdd() { this.form = this.emptyForm(); this.editId = null; this.tagsInput = ''; this.modalError = ''; this.showModal = true; }
+  openAdd() {
+    this.form = this.emptyForm();
+    this.editId = null;
+    this.tagsInput = '';
+    this.modalError = '';
+    this.duplicateWarning = '';
+    this.strength = { score: 0, color: '' };
+    this.showModal = true;
+  }
 
   openEdit(c: Credential) {
     this.form = { ...c };
     this.editId = c.id ?? null;
     this.tagsInput = (c.tags ?? []).join(', ');
     this.modalError = '';
+    this.duplicateWarning = '';
     this.showModal = true;
+    if (this.form.sitePassword) {
+      this.checkStrength();
+      this.checkDuplicate();
+    }
   }
 
   closeModal() { this.showModal = false; }
 
   checkStrength() { this.strength = this.gen.checkStrength(this.form.sitePassword ?? ''); }
 
+  checkDuplicate() {
+    const pw = this.form.sitePassword ?? '';
+    if (!pw) { this.duplicateWarning = ''; return; }
+    const match = this.credentials().find(c => c.sitePassword === pw && c.id !== this.editId);
+    this.duplicateWarning = match
+      ? `⚠️ Already used for: ${match.siteName}. Use a unique password.`
+      : '';
+  }
+
   generatePw() {
     this.form.sitePassword = this.gen.generate({ length: 16, uppercase: true, lowercase: true, numbers: true, symbols: true });
     this.checkStrength();
+    this.checkDuplicate();
+  }
+
+  strengthenPw() {
+    const current = this.form.sitePassword ?? '';
+    const arr = new Uint32Array(3);
+    crypto.getRandomValues(arr);
+    this.form.sitePassword = current
+      + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[arr[0] % 26]
+      + '0123456789'[arr[1] % 10]
+      + '!@#$%^&*'[arr[2] % 8];
+    this.checkStrength();
+    this.checkDuplicate();
+    this.showToast('Password strengthened!');
   }
 
   async save() {
@@ -249,7 +311,11 @@ export class PasswordManagerComponent implements OnInit {
     this.showToast(`${label} copied!`);
   }
 
-  copyPassword(c: Credential) { this.copy(c.sitePassword, 'Password'); }
+  async copyPassword(c: Credential) {
+    navigator.clipboard.writeText(c.sitePassword);
+    await this.credService.logCopyAction(c.id!, c.siteName);
+    this.showToast('Password copied!');
+  }
 
   async addFolderPrompt() {
     const name = prompt('New folder name:');

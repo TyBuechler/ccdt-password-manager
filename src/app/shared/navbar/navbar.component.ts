@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
+import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
@@ -15,11 +16,12 @@ import { CommonModule } from '@angular/common';
       </div>
 
       <div class="nav-links" *ngIf="auth.isAuthenticated">
-        <a routerLink="/dashboard"        routerLinkActive="active">Dashboard</a>
-        <a routerLink="/passwords"        routerLinkActive="active">Passwords</a>
-        <a routerLink="/feedback"         routerLinkActive="active">Feedback</a>
-        <a routerLink="/faq"              routerLinkActive="active">FAQ</a>
-        <a routerLink="/settings"         routerLinkActive="active">Settings</a>
+        <a routerLink="/dashboard"   routerLinkActive="active">Dashboard</a>
+        <a routerLink="/passwords"   routerLinkActive="active">Passwords</a>
+        <a routerLink="/audit-logs"  routerLinkActive="active">Audit Logs</a>
+        <a routerLink="/feedback"    routerLinkActive="active">Feedback</a>
+        <a routerLink="/faq"         routerLinkActive="active">FAQ</a>
+        <a routerLink="/settings"    routerLinkActive="active">Settings</a>
       </div>
 
       <div class="nav-actions">
@@ -34,6 +36,9 @@ import { CommonModule } from '@angular/common';
         </a>
       </div>
     </nav>
+    <div class="idle-banner" *ngIf="auth.idleWarning()">
+      ⚠️ {{ auth.idleWarning() }}
+    </div>
   `,
   styles: [`
     .navbar {
@@ -90,11 +95,30 @@ import { CommonModule } from '@angular/common';
       white-space: nowrap;
     }
     .btn-sm { font-size: 12px; padding: 6px 14px; }
+    .idle-banner {
+      background: var(--accent-warn, #f59e0b);
+      color: #000;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 8px 28px;
+      text-align: center;
+    }
   `]
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   router = inject(Router);
+  private navSub: Subscription | null = null;
+
+  ngOnInit() {
+    this.navSub = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe(() => this.auth.resetIdleTimer());
+  }
+
+  ngOnDestroy() {
+    this.navSub?.unsubscribe();
+  }
 
   async logout() {
     await this.auth.logout();

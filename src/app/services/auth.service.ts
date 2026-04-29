@@ -1,27 +1,38 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import {
-  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, onAuthStateChanged, User, updatePassword,
   EmailAuthProvider, reauthenticateWithCredential
 } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-import { environment } from '../../environments/environment';
-
-const app = initializeApp(environment.firebase);
-const auth = getAuth(app);
+import { fromEvent, merge, Subscription } from 'rxjs';
+import { auth } from './firebase';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   currentUser = signal<User | null>(null);
   isLoading = signal(true);
+  idleWarning = signal('');
 
   private failedAttempts = 0;
   private lockoutUntil: Date | null = null;
+  private router = inject(Router);
+
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private warnTimer: ReturnType<typeof setTimeout> | null = null;
+  private activitySub: Subscription | null = null;
+  private readonly IDLE_MINUTES = 15;
+  private readonly WARN_MINUTES = 13;
 
   constructor() {
     onAuthStateChanged(auth, (user) => {
       this.currentUser.set(user);
       this.isLoading.set(false);
+      if (user) {
+        this.startIdleWatcher();
+      } else {
+        this.stopIdleWatcher();
+      }
     });
   }
 
@@ -53,7 +64,8 @@ export class AuthService {
       throw new Error(`Account locked. Try again in ${this.lockoutRemaining()}s.`);
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      this.currentUser.set(result.user);
       this.failedAttempts = 0;
     } catch (err) {
       this.failedAttempts++;
@@ -70,6 +82,7 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
+    this.stopIdleWatcher();
     await signOut(auth);
   }
 
@@ -79,5 +92,40 @@ export class AuthService {
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
     await updatePassword(user, newPassword);
+  }
+
+  startIdleWatcher(): void {
+    this.stopIdleWatcher();
+    const events$ = merge(
+      fromEvent(document, 'mousemove'),
+      fromEvent(document, 'keypress'),
+      fromEvent(document, 'click'),
+      fromEvent(document, 'touchstart')
+    );
+    this.activitySub = events$.subscribe(() => this.resetIdleTimer());
+    this.resetIdleTimer();
+  }
+
+  stopIdleWatcher(): void {
+    if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    if (this.warnTimer) { clearTimeout(this.warnTimer); this.warnTimer = null; }
+    if (this.activitySub) { this.activitySub.unsubscribe(); this.activitySub = null; }
+    this.idleWarning.set('');
+  }
+
+  resetIdleTimer(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    if (this.warnTimer) clearTimeout(this.warnTimer);
+    this.idleWarning.set('');
+
+    this.warnTimer = setTimeout(() => {
+      this.idleWarning.set('You will be logged out in 2 minutes due to inactivity');
+    }, this.WARN_MINUTES * 60 * 1000);
+
+    this.idleTimer = setTimeout(async () => {
+      this.idleWarning.set('');
+      await this.logout();
+      this.router.navigate(['/login']);
+    }, this.IDLE_MINUTES * 60 * 1000);
   }
 }
