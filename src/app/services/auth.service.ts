@@ -63,16 +63,23 @@ export class AuthService {
     if (this.isLockedOut()) {
       throw new Error(`Account locked. Try again in ${this.lockoutRemaining()}s.`);
     }
+
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser.set(result.user);
       this.failedAttempts = 0;
-    } catch (err) {
+    } catch (err: any) {
       this.failedAttempts++;
+
+      if (err?.code === 'auth/user-not-found') {
+        throw new Error('Account does not exist.');
+      }
+
       if (this.failedAttempts >= 5) {
         this.lockoutUntil = new Date(Date.now() + 15 * 60 * 1000);
         throw new Error('Too many failed attempts. Account locked for 15 minutes.');
       }
+
       throw new Error('Authentication failed. Check your credentials.');
     }
   }

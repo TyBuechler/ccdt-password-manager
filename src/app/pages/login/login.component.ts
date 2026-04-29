@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -100,20 +100,32 @@ export class LoginComponent {
 
   auth = inject(AuthService);
   router = inject(Router);
+  cdr = inject(ChangeDetectorRef);
 
   async login() {
     this.error = '';
     this.lockedMsg = '';
-    if (!this.email || !this.password) { this.error = 'Email and password are required.'; return; }
+
+    if (!this.email || !this.password) {
+      this.error = 'Email and password are required.';
+      return;
+    }
+
     this.loading = true;
+    this.cdr.detectChanges();
+
     try {
       await this.auth.login(this.email, this.password);
       this.router.navigate(['/dashboard']);
     } catch (e: any) {
-      if (e.message.includes('locked')) this.lockedMsg = e.message;
-      else this.error = e.message;
+      if (e.message.includes('locked')) {
+        this.lockedMsg = e.message;
+      } else {
+        this.error = e.message || 'Login failed.';
+      }
     } finally {
       this.loading = false;
+      this.cdr.detectChanges();
     }
   }
 }
