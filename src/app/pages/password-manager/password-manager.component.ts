@@ -24,7 +24,7 @@ import { Credential, Folder } from '../../models/credential.model';
       <!-- Folder tabs -->
       <div class="folder-tabs">
         <button class="tab" [class.active]="!activeFolder" (click)="activeFolder = null; runSearch()">All</button>
-        <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="activeFolder = f.id; runSearch()">
+        <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="activeFolder = f.id ?? null; runSearch()">
           {{ f.name }}
         </button>
         <button class="tab add-folder" (click)="addFolderPrompt()">+ Folder</button>

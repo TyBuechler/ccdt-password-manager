@@ -40,7 +40,7 @@ export interface SharedCredential {
 }
 
 export interface Folder {
-  id?: string;
+  id: string;
   name: string;
   userId: string;
   createdAt?: Date;
