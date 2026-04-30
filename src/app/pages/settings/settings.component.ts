@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
@@ -44,6 +44,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class SettingsComponent {
   auth = inject(AuthService);
+  cdr = inject(ChangeDetectorRef);
   currentPw = ''; newPw = ''; confirmPw = '';
   pwError = ''; pwSuccess = ''; pwLoading = false;
 
@@ -52,11 +53,12 @@ export class SettingsComponent {
     if (!this.currentPw || !this.newPw) { this.pwError = 'All fields required.'; return; }
     if (this.newPw !== this.confirmPw) { this.pwError = 'New passwords do not match.'; return; }
     this.pwLoading = true;
+    this.cdr.detectChanges();
     try {
       await this.auth.changePassword(this.currentPw, this.newPw);
       this.pwSuccess = 'Password updated successfully.';
       this.currentPw = this.newPw = this.confirmPw = '';
     } catch (e: any) { this.pwError = e.message; }
-    finally { this.pwLoading = false; }
+    finally { this.pwLoading = false; this.cdr.detectChanges(); }
   }
 }

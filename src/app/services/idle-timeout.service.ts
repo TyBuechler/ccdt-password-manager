@@ -125,12 +125,11 @@ export class IdleTimeoutService implements OnDestroy {
   }
 
   private async doLogout(): Promise<void> {
-    // Remove any visible warning overlay before logging out
     const overlay = document.querySelector('div[style*="position: fixed"][style*="top: 0"]');
     if (overlay) {
       document.body.removeChild(overlay);
     }
-
+    sessionStorage.setItem('logout_reason', 'inactivity');
     await this.authService.logout();
     this.router.navigate(['/login']);
   }

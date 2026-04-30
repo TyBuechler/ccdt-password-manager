@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CredentialService } from '../../services/credential.service';
@@ -39,17 +39,19 @@ import { CredentialService } from '../../services/credential.service';
 })
 export class FeedbackComponent {
   credService = inject(CredentialService);
+  cdr = inject(ChangeDetectorRef);
   message = ''; error = ''; success = ''; loading = false;
 
   async submit() {
     this.error = ''; this.success = '';
     if (this.message.length < 2) { this.error = 'Message must be at least 2 characters.'; return; }
     this.loading = true;
+    this.cdr.detectChanges();
     try {
       await this.credService.submitFeedback(this.message);
       this.success = 'Feedback submitted. Thank you!';
       this.message = '';
     } catch (e: any) { this.error = e.message; }
-    finally { this.loading = false; }
+    finally { this.loading = false; this.cdr.detectChanges(); }
   }
 }

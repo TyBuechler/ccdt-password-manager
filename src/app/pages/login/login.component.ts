@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, ChangeDetectorRef, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -21,6 +21,7 @@ import { AuthService } from '../../services/auth.service';
           <p class="muted mono">Secure credential management system</p>
         </div>
 
+        <div class="alert alert-warn" *ngIf="timeoutMsg" style="margin-bottom:16px">{{ timeoutMsg }}</div>
         <div class="alert alert-error" *ngIf="error">{{ error }}</div>
         <div class="alert alert-info" *ngIf="lockedMsg">{{ lockedMsg }}</div>
 
@@ -90,17 +91,25 @@ import { AuthService } from '../../services/auth.service';
     .alert { margin-bottom: 16px; }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   email = '';
   password = '';
   showPw = false;
   loading = false;
   error = '';
   lockedMsg = '';
+  timeoutMsg = '';
 
   auth = inject(AuthService);
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
+
+  ngOnInit() {
+    if (sessionStorage.getItem('logout_reason') === 'inactivity') {
+      this.timeoutMsg = 'You were logged out due to inactivity.';
+      sessionStorage.removeItem('logout_reason');
+    }
+  }
 
   async login() {
     this.error = '';

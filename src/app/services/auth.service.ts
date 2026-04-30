@@ -5,8 +5,9 @@ import {
   signOut, onAuthStateChanged, User, updatePassword,
   EmailAuthProvider, reauthenticateWithCredential
 } from 'firebase/auth';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { fromEvent, merge, Subscription } from 'rxjs';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -68,6 +69,11 @@ export class AuthService {
       const result = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser.set(result.user);
       this.failedAttempts = 0;
+      await addDoc(collection(db, 'users', result.user.uid, 'auditLogs'), {
+        userId: result.user.uid, action: 'login',
+        targetId: result.user.uid, targetName: email,
+        timestamp: Timestamp.now()
+      });
     } catch (err: any) {
       this.failedAttempts++;
 
@@ -90,6 +96,14 @@ export class AuthService {
 
   async logout(): Promise<void> {
     this.stopIdleWatcher();
+    const user = auth.currentUser;
+    if (user) {
+      await addDoc(collection(db, 'users', user.uid, 'auditLogs'), {
+        userId: user.uid, action: 'logout',
+        targetId: user.uid, targetName: user.email ?? '',
+        timestamp: Timestamp.now()
+      });
+    }
     await signOut(auth);
   }
 

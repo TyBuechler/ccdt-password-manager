@@ -5,7 +5,7 @@ export interface Credential {
   siteUsername: string;
   sitePassword: string; // stored encrypted
   tags?: string[];
-  folderId?: string;
+  folderIds?: string[];
   createdAt?: Date;
   updatedAt?: Date;
   strength?: 'weak' | 'fair' | 'strong' | 'very-strong';
