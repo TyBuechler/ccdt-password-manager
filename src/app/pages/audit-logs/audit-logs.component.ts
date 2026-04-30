@@ -35,7 +35,6 @@ import { AuditLog } from '../../models/credential.model';
         <table *ngIf="!isLoading() && filtered().length > 0" class="log-table">
           <thead>
             <tr>
-              <th></th>
               <th>Action</th>
               <th>Target</th>
               <th>Timestamp</th>
@@ -43,7 +42,6 @@ import { AuditLog } from '../../models/credential.model';
           </thead>
           <tbody>
             <tr *ngFor="let log of pageItems()">
-              <td class="icon-cell">{{ getIcon(log.action) }}</td>
               <td><span class="badge" [class]="getBadgeClass(log.action)">{{ log.action }}</span></td>
               <td class="target-cell">{{ log.targetName || '—' }}</td>
               <td class="time-cell mono">{{ formatTime(log.timestamp) }}</td>
@@ -112,14 +110,6 @@ export class AuditLogsComponent implements OnInit {
 
   prevPage() { if (this.page() > 1) this.page.update(p => p - 1); }
   nextPage() { if (this.page() < this.totalPages()) this.page.update(p => p + 1); }
-
-  getIcon(action: string): string {
-    const icons: Record<string, string> = {
-      login: '🔐', logout: '🚪', create: '➕', update: '✏️',
-      delete: '🗑', view: '👁', copy: '📋'
-    };
-    return icons[action] ?? '📌';
-  }
 
   getBadgeClass(action: string): string {
     const map: Record<string, string> = {

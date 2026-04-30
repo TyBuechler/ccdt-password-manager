@@ -23,18 +23,24 @@ import { Credential, Folder } from '../../models/credential.model';
 
       <!-- Folder tabs -->
       <div class="folder-tabs">
-        <button class="tab" [class.active]="!activeFolder" (click)="activeFolder = null; runSearch()">All</button>
-        <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="activeFolder = f.id; runSearch()">
-          {{ f.name }}
-        </button>
-        <button class="tab add-folder" (click)="addFolderPrompt()">+ Folder</button>
+        <div class="folder-row">
+          <button class="btn btn-icon" [class.active]="!activeFolder" (click)="activeFolder = null; runSearch()">All</button>
+          <button class="btn btn-icon" [disabled]="!activeFolder" (click)="editFolder()">Edit</button>
+          <button class="btn btn-danger" [disabled]="!activeFolder" (click)="deleteFolder()">Delete</button>
+        </div>
+        <div class="folder-row">
+          <button class="tab" *ngFor="let f of folders()" [class.active]="activeFolder === f.id" (click)="toggleFolder(f.id)">
+            {{ f.name }}
+          </button>
+          <button class="tab add-folder" (click)="addFolder()">+ Folder</button>
+        </div>
       </div>
 
       <!-- Tag cloud -->
       <div class="tag-cloud" *ngIf="allTags.length > 0">
         <button class="tag-chip" *ngFor="let t of allTags"
           [class.active]="activeTag === t"
-          (click)="activeTag = t; runSearch()">{{ t }}</button>
+          (click)="toggleTag(t)">{{ t }}</button>
         <button class="tag-chip tag-clear" *ngIf="activeTag" (click)="activeTag = null; runSearch()">✕ Clear</button>
       </div>
 
@@ -61,10 +67,10 @@ import { Credential, Folder } from '../../models/credential.model';
           </div>
 
           <div class="cred-actions">
-            <button class="btn btn-icon" title="Copy username" (click)="copy(c.siteUsername, 'Username')">📋 User</button>
-            <button class="btn btn-icon" title="Copy password" (click)="copyPassword(c)">🔑 Pass</button>
-            <button class="btn btn-icon" title="Edit" (click)="openEdit(c)">✏️</button>
-            <button class="btn btn-danger" title="Delete" (click)="deleteCred(c)">🗑</button>
+            <button class="btn btn-icon" title="Copy username" (click)="copy(c.siteUsername, 'Username')">Copy Username</button>
+            <button class="btn btn-icon" title="Copy password" (click)="copyPassword(c)">Copy Password</button>
+            <button class="btn btn-icon" title="Edit" (click)="openEdit(c)">Edit</button>
+            <button class="btn btn-danger" title="Delete" (click)="deleteCred(c)">Delete</button>
           </div>
         </div>
       </div>
@@ -73,14 +79,14 @@ import { Credential, Folder } from '../../models/credential.model';
       <div class="toast" *ngIf="toast" [class.show]="toast">{{ toast }}</div>
 
       <!-- Modal -->
-      <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-        <div class="modal panel" (click)="$event.stopPropagation()">
+      <div class="modal-overlay" *ngIf="showModal" (click)="onOverlayClick($event)">
+        <div class="modal panel" (click)="$event.stopPropagation()"(mousedown)="onModalMousedown()">
           <h3>{{ editId ? 'Edit Credential' : 'New Credential' }}</h3>
 
           <div class="modal-fields">
             <div class="field">
               <label>Site Name *</label>
-              <input type="text" [(ngModel)]="form.siteName" placeholder="e.g. GitHub" />
+              <input type="text" [(ngModel)]="form.siteName" placeholder="e.g. GitHub" maxlength="50"/>
             </div>
             <div class="field">
               <label>Site URL</label>
@@ -88,25 +94,30 @@ import { Credential, Folder } from '../../models/credential.model';
             </div>
             <div class="field">
               <label>Username / Email *</label>
-              <input type="text" [(ngModel)]="form.siteUsername" />
+              <input type="text" [(ngModel)]="form.siteUsername" maxlength="100"/>
             </div>
             <div class="field">
               <label>Password *</label>
               <div class="pw-row">
                 <input [type]="showPw ? 'text' : 'password'" [(ngModel)]="form.sitePassword"
                   (ngModelChange)="checkStrength(); checkDuplicate()" />
-                <button class="btn btn-icon" (click)="showPw = !showPw">{{ showPw ? '🙈' : '👁' }}</button>
-                <button class="btn btn-icon" title="Generate" (click)="generatePw()">⚡</button>
-                <button class="btn btn-icon" title="Strengthen" (click)="strengthenPw()">💪</button>
+                <button class="btn btn-icon" (click)="showPw = !showPw">👁</button>
+              </div>
+              <div class="pw-row" style="width: 100%">
+                <button class="btn btn-icon" style="flex: 1" title="Generate" (click)="generatePw()">Generate</button>
+                <button class="btn btn-icon" style="flex: 1" title="Strengthen" (click)="strengthenPw()">Strengthen</button>
               </div>
               <div class="strength-bar" *ngIf="form.sitePassword">
                 <div class="bar-fill" [style.width.%]="(strength.score / 4)*100" [style.background]="strength.color"></div>
               </div>
+              <span class="badge" [class]="strengthBadge(strength.label)">
+                Password Strength: {{ strength.label | titlecase }}
+              </span>
               <div class="dup-warning" *ngIf="duplicateWarning">{{ duplicateWarning }}</div>
             </div>
             <div class="field">
               <label>Tags (comma separated)</label>
-              <input type="text" [(ngModel)]="tagsInput" placeholder="work, social, finance" />
+              <input type="text" [(ngModel)]="tagsInput" placeholder="work, social, finance" maxlength="50"/>
             </div>
             <div class="field">
               <label>Folder</label>
@@ -136,6 +147,7 @@ import { Credential, Folder } from '../../models/credential.model';
     .search-field { margin: 0; min-width: 240px; }
     .search-field input { margin: 0; }
     h2 { font-family: var(--font-mono); font-size: 20px; }
+    .folder-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
     .folder-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
     .tab { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; font-family: var(--font-mono); font-size: 12px; padding: 6px 14px; text-transform: uppercase; transition: all var(--transition); }
     .tab:hover, .tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
@@ -191,6 +203,7 @@ export class PasswordManagerComponent implements OnInit {
   tagsInput = '';
   strength: any = { score: 0, color: '' };
   duplicateWarning = '';
+  dragStartedInModal = false;
 
   form: Partial<Credential> = this.emptyForm();
 
@@ -230,6 +243,7 @@ export class PasswordManagerComponent implements OnInit {
     this.duplicateWarning = '';
     this.strength = { score: 0, color: '' };
     this.showModal = true;
+    this.showPw = false;
   }
 
   openEdit(c: Credential) {
@@ -239,6 +253,7 @@ export class PasswordManagerComponent implements OnInit {
     this.modalError = '';
     this.duplicateWarning = '';
     this.showModal = true;
+    this.showPw = false;
     if (this.form.sitePassword) {
       this.checkStrength();
       this.checkDuplicate();
@@ -247,21 +262,35 @@ export class PasswordManagerComponent implements OnInit {
 
   closeModal() { this.showModal = false; }
 
+  onOverlayClick(e: MouseEvent) {
+    if (!this.dragStartedInModal) this.closeModal();
+    this.dragStartedInModal = false;
+  }
+
+  onModalMousedown() { this.dragStartedInModal = true; }
+
   checkStrength() { this.strength = this.gen.checkStrength(this.form.sitePassword ?? ''); }
 
   checkDuplicate() {
     const pw = this.form.sitePassword ?? '';
     if (!pw) { this.duplicateWarning = ''; return; }
-    const match = this.credentials().find(c => c.sitePassword === pw && c.id !== this.editId);
-    this.duplicateWarning = match
-      ? `⚠️ Already used for: ${match.siteName}. Use a unique password.`
-      : '';
+    const match = this.credentials().filter(c => c.sitePassword === pw && c.id !== this.editId);
+
+    if (match.length == 0) this.duplicateWarning = '';
+    else if (match.length == 1) {
+      this.duplicateWarning = `!! Already used for: ${match[0].siteName}. Use a unique password.`;
+    }
+    else {
+      const names = match.map(c => c.siteName).join(', ');
+      this.duplicateWarning = `!! Already used ${match.length} times: ${names}.Use a unique password.`;
+    }
   }
 
   generatePw() {
     this.form.sitePassword = this.gen.generate({ length: 16, uppercase: true, lowercase: true, numbers: true, symbols: true });
     this.checkStrength();
     this.checkDuplicate();
+    this.showToast('Password generated!');
   }
 
   strengthenPw() {
@@ -317,11 +346,50 @@ export class PasswordManagerComponent implements OnInit {
     this.showToast('Password copied!');
   }
 
-  async addFolderPrompt() {
+  async addFolder() {
     const name = prompt('New folder name:');
     if (!name) return;
+    if (name.trim().length > 50) {
+      alert('Folder name must be 50 characters or less.');
+      return;
+    }
     await this.credService.createFolder(name.trim());
     await this.load();
+    this.showToast('Folder created.');
+  }
+
+  async editFolder() {
+    const folder = this.folders().find(f => f.id === this.activeFolder);
+    if (!folder) return;
+    const name = prompt('New folder name:', folder.name);
+    if (!name) return;
+    if (name.trim().length > 50) {
+      alert('Folder name must be 50 characters or less.');
+      return;
+    }
+    await this.credService.updateFolder(folder!.id, name.trim());
+    await this.load();
+    this.showToast('Folder renamed.');
+  }
+
+  async deleteFolder() {
+    const folder = this.folders().find(f => f.id === this.activeFolder);
+    if (!folder) return;
+    if (!confirm(`Delete folder "${folder.name}"? Credentials inside will not be deleted.`)) return;
+    await this.credService.deleteFolder(folder.id);
+    this.activeFolder = null;
+    await this.load();
+    this.showToast('Folder deleted.');
+  }
+
+  toggleFolder(id: string) {
+    this.activeFolder = this.activeFolder === id ? null : id;
+    this.runSearch();
+  }
+
+  toggleTag(tag: string) {
+    this.activeTag = this.activeTag === tag ? null : tag;
+    this.runSearch();
   }
 
   strengthBadge(s?: string) {
