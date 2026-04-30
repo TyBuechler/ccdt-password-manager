@@ -15,8 +15,8 @@ import { CredentialService } from '../../services/credential.service';
       <div class="panel">
         <div class="field">
           <label>Your Message</label>
-          <textarea [(ngModel)]="message" rows="5" placeholder="Share your thoughts, bugs, or feature requests…" maxlength="200"></textarea>
-          <span class="char-count muted mono">{{ message.length }}/200</span>
+          <textarea [(ngModel)]="message" rows="5" placeholder="Share your thoughts, bugs, or feature requests…" maxlength="10000"></textarea>
+          <span class="char-count muted mono">{{ message.length }}/10000</span>
         </div>
 
         <div class="alert alert-error" *ngIf="error">{{ error }}</div>

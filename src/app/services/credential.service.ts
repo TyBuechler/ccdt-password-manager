@@ -73,6 +73,12 @@ export class CredentialService {
     return ref.id;
   }
 
+  async updateFolder(folderId: string, name: string): Promise<void> {
+    const uid = this.uid;
+    const ref = doc(db, 'users', uid, 'folders', folderId);
+    await updateDoc(ref, { name });
+  }
+
   async deleteFolder(folderId: string): Promise<void> {
     const uid = this.uid;
     await deleteDoc(doc(db, 'users', uid, 'folders', folderId));

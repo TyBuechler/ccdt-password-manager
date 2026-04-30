@@ -20,25 +20,16 @@ import { Credential, AuditLog } from '../../models/credential.model';
       </header>
 
       <div class="stats-grid">
-        <div class="stat-card panel">
-          <span class="stat-icon">🔑</span>
-          <div>
+        <div class="stat-card panel" style="display: flex; justify-content: center; align-items: center;">
+          <div style="text-align: center">
             <div class="stat-value">{{ credentials().length }}</div>
             <div class="stat-label mono">Stored Passwords</div>
           </div>
         </div>
-        <div class="stat-card panel">
-          <span class="stat-icon">⚠️</span>
-          <div>
+        <div class="stat-card panel" style="display: flex; justify-content: center; align-items: center;">
+          <div style="text-align: center">
             <div class="stat-value accent-danger">{{ weakCount() }}</div>
             <div class="stat-label mono">Weak Passwords</div>
-          </div>
-        </div>
-        <div class="stat-card panel">
-          <span class="stat-icon">📋</span>
-          <div>
-            <div class="stat-value">{{ auditLogs().length }}</div>
-            <div class="stat-label mono">Audit Events</div>
           </div>
         </div>
       </div>
@@ -49,7 +40,6 @@ import { Credential, AuditLog } from '../../models/credential.model';
           <div *ngIf="auditLogs().length === 0" class="empty-state muted mono">No activity yet.</div>
           <div class="log-list">
             <div class="log-row" *ngFor="let log of auditLogs().slice(0, 10)">
-              <span class="log-icon">{{ getActionIcon(log.action) }}</span>
               <span class="log-action badge" [class]="getBadgeClass(log.action)">{{ log.action }}</span>
               <span class="log-target">{{ log.targetName || '—' }}</span>
               <span class="log-time muted mono">{{ formatTime(log.timestamp) }}</span>
@@ -100,14 +90,6 @@ export class DashboardComponent implements OnInit {
   getBadgeClass(action: string): string {
     const map: Record<string, string> = { create: 'badge-success', delete: 'badge-danger', update: 'badge-warn', login: 'badge-info' };
     return map[action] ?? 'badge-info';
-  }
-
-  getActionIcon(action: string): string {
-    const icons: Record<string, string> = {
-      login: '🔐', logout: '🚪', create: '➕', update: '✏️',
-      delete: '🗑', view: '👁', copy: '📋'
-    };
-    return icons[action] ?? '📌';
   }
 
   formatTime(ts: any): string {

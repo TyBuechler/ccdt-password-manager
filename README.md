@@ -10,16 +10,16 @@ A secure, client/server password management application built with Angular and F
 - **Language:** TypeScript / Java (server-side validation)
 
 ## Features
-- 🔐 User registration & login with timed lockout (5 attempts → 15 min)
-- 🔑 Encrypted credential storage (store site passwords securely)
-- ⚡ Random password generator (Web Crypto API)
-- 💪 Password strength checker
-- 📁 Tags & folder organization
-- 🔍 Search & filter credentials
-- 📋 Copy-to-clipboard (username & password)
-- 📊 Audit log dashboard
-- ✉️ Feedback submission
-- ❓ FAQ page
+- User registration & login with timed lockout (5 attempts → 15 min)
+- Encrypted credential storage
+- Random password generator
+- Password strength checker
+- Tags & folder organization
+- Search & filter credentials
+- Copy username and password to clipboard
+- Audit log dashboard
+- Feedback submission
+- FAQ page
 
 ## Setup
 
